@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Tux Browser - WiX Installer Configuration
+  Creates .msi installer for Windows
+  Requires: WiX Toolset v3.11+ (wixtoolset.org)
+-->
+
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <?define ProductVersion = "1.0.0"?>
+  <?define ProductName = "Tux Browser"?>
+  <?define Manufacturer = "Tux Browser Team"?>
+  <?define UpgradeCode = "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"?>
+  <?define InstallDir = "ProgramFilesFolder"?>
+  <?define BinarySource = "..\..\chromium-main\chromium-main\out\tux_browser"?>
+
+  <Product Id="*" 
+           Name="$(var.ProductName)" 
+           Language="1033" 
+           Version="$(var.ProductVersion)" 
+           Manufacturer="$(var.Manufacturer)" 
+           UpgradeCode="$(var.UpgradeCode)">
+    
+    <Package InstallerVersion="500" 
+             Compressed="yes" 
+             InstallScope="perMachine" 
+             Description="$(var.ProductName) - Privacy-focused browser with integrated Tor" 
+             Comments="Privacy-focused web browser with integrated Tor network" 
+             Manufacturer="$(var.Manufacturer)" 
+             InstallPrivileges="elevated" 
+             Platform="x64" />
+    
+    <MajorUpgrade DowngradeErrorMessage="A newer version of $(var.ProductName) is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+    
+    <!-- Features -->
+    <Feature Id="MainApplication" Title="Tux Browser" Level="1" ConfigurableDirectory="INSTALLFOLDER">
+      <ComponentGroupRef Id="BrowserComponents" />
+      <ComponentRef Id="ApplicationShortcuts" />
+      <ComponentRef Id="StartMenuShortcuts" />
+    </Feature>
+    
+    <Feature Id="EmbeddedTor" Title="Embedded Tor" Level="1">
+      <ComponentGroupRef Id="TorComponents" />
+    </Feature>
+    
+    <Feature Id="PluggableTransports" Title="Pluggable Transports" Level="1">
+      <ComponentGroupRef Id="TransportComponents" />
+    </Feature>
+    
+    <!-- UI -->
+    <UIRef Id="WixUI_Minimal" />
+    <UIRef Id="WixUI_ErrorProgressText" />
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+    
+    <!-- Properties -->
+    <Property Id="APPLICATIONROOTDIRECTORY" Value="$(var.InstallDir)" />
+    <Property Id="INSTALLFOLDER" Value="$(var.InstallDir)\Tux Browser" />
+    
+    <!-- Directories -->
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="$(var.InstallDir)">
+        <Directory Id="INSTALLFOLDER" Name="Tux Browser">
+          <Directory Id="BINDIR" Name="bin" />
+          <Directory Id="LIBDIR" Name="lib" />
+          <Directory Id="TOR_DIR" Name="tor">
+            <Directory Id="PT_DIR" Name="pluggable_transports" />
+          </Directory>
+        </Directory>
+      </Directory>
+      
+      <!-- Program Menu -->
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="Tux Browser" />
+      </Directory>
+      
+      <!-- Desktop -->
+      <Directory Id="DesktopFolder" Name="Desktop" />
+    </Directory>
+    
+    <!-- Component Groups -->
+    <ComponentGroup Id="BrowserComponents" Directory="LIBDIR">
+      <Component Id="BrowserExe" Guid="*">
+        <File Id="BrowserExeFile" Source="$(var.BinarySource)\chrome.exe" KeyPath="yes" Name="tux-browser.exe" />
+      </Component>
+      
+      <Component Id="BrowserLauncher" Guid="*" Directory="BINDIR">
+        <File Id="LauncherBat" Source="..\..\install_windows.bat" KeyPath="yes" Name="tux-browser.bat" />
+        <File Id="LauncherPs1" Source="..\..\install_windows.ps1" Name="tux-browser.ps1" />
+      </Component>
+    </ComponentGroup>
+    
+    <ComponentGroup Id="TorComponents" Directory="TOR_DIR">
+      <Component Id="TorExe" Guid="*">
+        <File Id="TorExeFile" Source="..\..\tor-expert-bundle-windows-x64\tor\tor.exe" KeyPath="yes" />
+      </Component>
+      <Component Id="TorDlls" Guid="*">
+        <File Id="LibCrypto" Source="..\..\tor-expert-bundle-windows-x64\tor\libcrypto-3-x64.dll" />
+        <File Id="LibSsl" Source="..\..\tor-expert-bundle-windows-x64\tor\libssl-3-x64.dll" />
+        <File Id="LibEvent" Source="..\..\tor-expert-bundle-windows-x64\tor\libevent-2.1-7.dll" />
+      </Component>
+    </ComponentGroup>
+    
+    <ComponentGroup Id="TransportComponents" Directory="PT_DIR">
+      <Component Id="Obfs4Proxy" Guid="*">
+        <File Id="Obfs4ProxyFile" Source="..\..\tor-expert-bundle-windows-x64\tor\pluggable_transports\obfs4proxy.exe" KeyPath="yes" />
+      </Component>
+      <Component Id="SnowflakeClient" Guid="*">
+        <File Id="SnowflakeClientFile" Source="..\..\tor-expert-bundle-windows-x64\tor\pluggable_transports\snowflake-client.exe" />
+      </Component>
+      <Component Id="ConjureClient" Guid="*">
+        <File Id="ConjureClientFile" Source="..\..\tor-expert-bundle-windows-x64\tor\pluggable_transports\conjure-client.exe" />
+      </Component>
+    </ComponentGroup>
+    
+    <!-- Shortcuts -->
+    <Component Id="ApplicationShortcuts" Directory="DesktopFolder" Guid="*">
+      <Shortcut Id="DesktopShortcut" 
+                Name="Tux Browser" 
+                Description="Privacy-focused browser with integrated Tor" 
+                Target="[BINDIR]tux-browser.ps1" 
+                WorkingDirectory="INSTALLFOLDER" 
+                Icon="TuxBrowser.ico" 
+                IconIndex="0" />
+      <RemoveFolder Id="CleanDesktopFolder" On="uninstall" />
+      <RegistryValue Root="HKCU" Key="Software\TuxBrowser" Name="Installed" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+    
+    <Component Id="StartMenuShortcuts" Directory="ApplicationProgramsFolder" Guid="*">
+      <Shortcut Id="StartMenuShortcut" 
+                Name="Tux Browser" 
+                Description="Privacy-focused browser with integrated Tor" 
+                Target="[BINDIR]tux-browser.ps1" 
+                WorkingDirectory="INSTALLFOLDER" 
+                Icon="TuxBrowser.ico" 
+                IconIndex="0" />
+      <Shortcut Id="UninstallShortcut" 
+                Name="Uninstall Tux Browser" 
+                Target="[System64Folder]msiexec.exe" 
+                Arguments="/x [ProductCode]" 
+                Description="Uninstall Tux Browser" />
+      <RemoveFolder Id="CleanStartMenuFolder" On="uninstall" />
+      <RegistryValue Root="HKCU" Key="Software\TuxBrowser" Name="StartMenu" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+    
+    <!-- Icon -->
+    <Icon Id="TuxBrowser.ico" SourceFile="..\..\assets\tux-browser.ico" />
+    
+    <!-- Custom Actions for Tor Setup -->
+    <CustomAction Id="CreateTorDataDir" 
+                  Directory="TOR_DIR" 
+                  ExeCommand="cmd /c mkdir \"%LOCALAPPDATA%\Tux Browser\tor\" \"%LOCALAPPDATA%\Tux Browser\profile"" 
+                  Return="check" 
+                  Execute="deferred" 
+                  Impersonate="yes" />
+    
+    <InstallExecuteSequence>
+      <Custom Action="CreateTorDataDir" After="InstallFiles">NOT Installed</Custom>
+    </InstallExecuteSequence>
+    
+  </Product>
+</Wix>
