@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-08-08T11:55:18.628310",
+  "total_time_seconds": 43.02172493934631,
+  "test_results": {
+    "IP Leak Attack Tests": {
+      "script": "/home/pie/Desktop/Tux_browser/tests/rigorous/ip_attack_tests.py",
+      "exit_code": 0,
+      "stdout": "======================================================================\nTux Browser - RIGOROUS IP LEAK ATTACK TEST SUITE\n======================================================================\n\n[TEST 1] Basic IP Leak Test\n  Real IP:  42.105.181.64\n  Tor IP:   96.44.154.224\n  \u2713 basic_ip_leak: PASS - \n\n[TEST 2] DNS Leak Test (Multiple Domains)\n  \u2713 dns_leak_multi: PASS - All DNS queries properly routed through Tor\n\n[TEST 3] System DNS Resolver Bypass Test\n  \u2139 dns_resolver_bypass: INFO - Connected via Tor but check page not found\n\n[TEST 4] HTTP Host Header Leak Test\n  \u2713 http_host_leak: PASS - Host header not leaked\n\n[TEST 5] TCP Timing Side-Channel Test\n  \u2713 tcp_timing: PASS - Tor connection times measured (avg: 1.056s), Direct: 0.068s\n\n[TEST 6] Concurrent Circuit Isolation Test\n  Unique exit nodes observed: 1\n    - 109.70.100.15\n  \u26a0 circuit_isolation: WARN - Single exit node (may be expected for same circuit)\n\n[TEST 7] HTTP Referrer Leak Test\n  \u2713 http_referrer_leak: PASS - Referrer not leaked in response\n\n[TEST 8] ETag/Cache Tracking Test\n  \u2139 etag_tracking: INFO - No ETag in response\n\n[TEST 9] Tor NEWNYM (New Identity) Test\n  \u26a0 tor_newnym: ERROR - timed out\n\n[TEST 10] Onion Service Access Test\n  \u26a0 onion_access: WARN - Connected but unexpected response: HTTP/1.1 301 Moved Permanently\nServer: nginx\nDate: Sat, 08 Aug 2026 06:25:15 GMT\nContent-Type: text/html\nContent-Length: 162\nConnection: close\nLocation: https://duckduckgogg42xjoc72x3sjasowoarfb\n\n======================================================================\nSUMMARY: 5/10 passed, 0 failed, 1 errors, 2 warnings, 0 skipped\n======================================================================\n\nWARNINGS:\n  - circuit_isolation: Single exit node (may be expected for same circuit)\n  - onion_access: Connected but unexpected response: HTTP/1.1 301 Moved Permanently\nServer: nginx\nDate: Sat, 08 Aug 2026 06:25:15 GMT\nContent-Type: text/html\nContent-Length: 162\nConnection: close\nLocation: https://duckduckgogg42xjoc72x3sjasowoarfb\n",
+      "stderr": "",
+      "success": true
+    },
+    "WebRTC Leak Attack Tests": {
+      "script": "/home/pie/Desktop/Tux_browser/tests/rigorous/webrtc_attack_tests.py",
+      "exit_code": 0,
+      "stdout": "======================================================================\nTux Browser - RIGOROUS WebRTC LEAK ATTACK TEST SUITE\n======================================================================\n\n[TEST 1] WebRTC Code-Level Blocking Check\n  \u2713 webrtc_code_block: PASS - WebRTC blocked in all security levels\n\n[TEST 2] Fingerprinting Protection WebRTC Check\n  \u26a0 fp_webrtc_protection: WARN - Some WebRTC fingerprinting protections missing\n\n[TEST 5] Tor IP Verification via WebRTC Page\n  \u2298 tor_ip_verification: SKIP - Browser binary not found at /home/pie/Desktop/Tux_browser/chromium-main/chromium-main/out/tux_browser/chrome\n\n======================================================================\nSUMMARY: 1/3 passed, 0 failed, 0 errors, 1 warnings, 1 skipped\n======================================================================\n\nWARNINGS:\n  - fp_webrtc_protection: Some WebRTC fingerprinting protections missing\n",
+      "stderr": "",
+      "success": true
+    },
+    "Fingerprinting Attack Tests": {
+      "script": "/home/pie/Desktop/Tux_browser/tests/rigorous/fingerprinting_attack_tests.py",
+      "exit_code": 0,
+      "stdout": "======================================================================\nTux Browser - RIGOROUS FINGERPRINTING ATTACK TEST SUITE\n======================================================================\n\n[TEST 1] Fingerprinting Protection Code Check\n  \u2713 fp_code_check: PASS - Fingerprinting protection covers 13/15 areas\n\n[TEST 2] Content Blocker Fingerprinting Check\n  \u2713 cb_fp_check: PASS - Content blocker blocks 12/13 fingerprinting vectors in Safest mode\n\n[TEST 4] Tor IP Verification via Fingerprinting Page\n  \u2298 tor_ip_verification_fp: SKIP - Browser binary not found at /home/pie/Desktop/Tux_browser/chromium-main/chromium-main/out/tux_browser/chrome\n\n======================================================================\nSUMMARY: 2/3 passed, 0 failed, 0 errors, 0 warnings, 1 skipped\n======================================================================\n",
+      "stderr": "",
+      "success": true
+    }
+  }
+}

@@ -1,0 +1,93 @@
+# Tux Browser GN Build Arguments
+# 
+# To use: gn args out/tux_browser
+# Then paste these arguments.
+
+# Tux Browser branding
+is_tux_browser = true
+
+# Enable Tor integration
+enable_tor = true
+
+# Disable Google services for privacy
+enable_google_services = false
+enable_chrome_extensions = true
+enable_widevine = false
+proprietary_codecs = false
+ffmpeg_branding = "Chrome"
+
+# Disable metrics and crash reporting
+enable_metrics_reporting = false
+enable_crash_reporter = false
+
+# Safe browsing (0 = disabled, 1 = standard, 2 = enhanced)
+safe_browsing_mode = 0
+
+# Build type
+is_official_build = false
+is_debug = false
+symbol_level = 1
+
+# Optimization
+is_component_build = false
+use_thin_lto = true
+
+# Target OS/CPU (adjust as needed)
+# target_os = "linux"
+# target_cpu = "x64"
+
+# Enable Tor networking stack
+# This requires the net/tor targets to be built
+enable_tor_networking = true
+
+# Use system libraries where possible
+use_system_icu = true
+use_system_libjpeg = true
+use_system_libpng = true
+use_system_zlib = true
+use_system_freetype = true
+use_system_harfbuzz = true
+
+# Disable NaCl (not needed)
+enable_nacl = false
+enable_nacl_nonsfi = false
+
+# V8 snapshot
+v8_use_snapshot = true
+v8_enable_slow_dchecks = false
+
+# PDFium
+pdf_use_skia = true
+pdf_use_skia_paths = true
+
+# Skia
+skia_use_system_expat = false
+skia_use_system_icu = false
+skia_use_system_libjpeg_turbo = false
+skia_use_system_libpng = false
+skia_use_system_libwebp = false
+skia_use_system_zlib = false
+
+# Angle (for GPU)
+angle_enable_vulkan = true
+angle_enable_swiftshader = false
+
+# Enable JIT
+v8_enable_webassembly = true
+
+# Enable WebRTC (but we'll block it at runtime for privacy)
+enable_webrtc = true
+
+# Disable some features for privacy
+enable_background_networking = false
+enable_default_apps = false
+enable_autofill = false
+enable_password_manager = false
+enable_sync = false
+enable_translate = false
+enable_spellcheck = false
+enable_printing = true
+enable_cast = false
+enable_mdns = false
+enable_nearby = false
+enable_quickshare = false

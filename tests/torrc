@@ -1,0 +1,10 @@
+# Tor configuration for testing
+SOCKSPort 9050
+ControlPort 9051
+CookieAuthentication 1
+DataDirectory /home/pie/Desktop/Tux_browser/tests/tor_data
+Log notice stdout
+AvoidDiskWrites 1
+ClientTransportPlugin obfs4 exec /home/pie/Desktop/Tux_browser/tor-expert-bundle-linux-x86_64-15.0.19/tor/pluggable_transports/obfs4proxy
+ClientTransportPlugin snowflake exec /home/pie/Desktop/Tux_browser/tor-expert-bundle-linux-x86_64-15.0.19/tor/pluggable_transports/lyrebird
+ClientTransportPlugin conjure exec /home/pie/Desktop/Tux_browser/tor-expert-bundle-linux-x86_64-15.0.19/tor/pluggable_transports/conjure-client -registerURL https://registration.refraction.network/api

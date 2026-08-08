@@ -1,0 +1,72 @@
+# Tux Browser - Build & Development Artifacts
+
+# Build outputs
+out/
+chromium-main/chromium-main/out/
+
+# Large binary directories (use git-lfs or download separately)
+chromium-main/chromium-main/third_party/
+chromium-main/chromium-main/.git/
+tor-expert-bundle-linux-x86_64-15.0.19/
+tor-browser/
+
+# Python virtual environment
+test_env/
+venv/
+.env/
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test outputs
+test_results/
+coverage/
+*.profraw
+
+# Distribution
+*.dmg
+*.AppImage
+*.deb
+*.rpm
+*.msi
+*.exe
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Node modules (if any)
+node_modules/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Tor data
+tests/tor_data/
+*.onion
+
+# Keys and certificates
+*.pem
+*.key
+*.crt
+*.p12
+
+# Environment files
+.env.local
+.env.production
