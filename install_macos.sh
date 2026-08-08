@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # Tux Browser Installer for macOS
 # This script installs Tux Browser as a .app bundle
+# Also fetches Chromium source and builds if needed
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BUILD_DIR="${SCRIPT_DIR}/chromium-main/chromium-main/out/tux_browser"
+CHROMIUM_SRC="${SCRIPT_DIR}/chromium-main/chromium-main"
+BUILD_DIR="${CHROMIUM_SRC}/out/tux_browser"
 APP_NAME="Tux Browser.app"
 INSTALL_PREFIX="${INSTALL_PREFIX:-/Applications}"
 
@@ -21,6 +23,65 @@ print_success() { echo -e "${GREEN}[SUCCESS]${NC} $*"; }
 print_warning() { echo -e "${YELLOW}[WARNING]${NC} $*"; }
 print_error() { echo -e "${RED}[ERROR]${NC} $*"; }
 
+fetch_chromium() {
+    print_info "Fetching Chromium source..."
+    
+    # Check if depot_tools is available
+    if ! command -v gclient &> /dev/null; then
+        print_info "Installing depot_tools..."
+        DEPOT_TOOLS_DIR="${HOME}/.tux-browser/depot_tools"
+        if [[ ! -d "$DEPOT_TOOLS_DIR" ]]; then
+            git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git "$DEPOT_TOOLS_DIR"
+        fi
+        export PATH="${DEPOT_TOOLS_DIR}:${PATH}"
+    fi
+    
+    # Create chromium-main directory
+    mkdir -p "${SCRIPT_DIR}/chromium-main"
+    cd "${SCRIPT_DIR}/chromium-main"
+    
+    # Initialize gclient if needed
+    if [[ ! -f ".gclient" ]]; then
+        print_info "Configuring gclient for Chromium..."
+        cat > .gclient << 'EOF'
+solutions = [
+  {
+    "name": "chromium-main",
+    "url": "https://chromium.googlesource.com/chromium/src.git",
+    "deps_file": "DEPS",
+    "managed": True,
+    "custom_deps": {},
+    "safesync_url": "",
+  },
+]
+target_os = ["mac"]
+target_os_only = True
+EOF
+    fi
+    
+    # Sync Chromium (this will take a while)
+    print_info "Syncing Chromium source (this may take 30-60 minutes)..."
+    gclient sync --no-history --shallow
+    
+    print_success "Chromium source fetched successfully"
+}
+
+build_tux_browser() {
+    print_info "Building Tux Browser..."
+    
+    if [[ ! -f "${CHROMIUM_SRC}/BUILD.gn" ]]; then
+        print_error "Chromium source not found. Run with --fetch-chromium first."
+        exit 1
+    fi
+    
+    cd "${CHROMIUM_SRC}"
+    
+    # Run build script
+    "${SCRIPT_DIR}/build_tux_browser.sh" --clean
+    
+    print_success "Tux Browser built successfully"
+}
+
 usage() {
     cat << EOF
 Tux Browser Installer for macOS
@@ -28,18 +89,22 @@ Tux Browser Installer for macOS
 Usage: $0 [options]
 
 Options:
-    --prefix=DIR      Installation directory (default: /Applications)
-    --user            Install to ~/Applications instead
-    --dmg             Create DMG installer instead of installing
-    --uninstall       Uninstall Tux Browser
-    --help            Show this help
+    --prefix=DIR           Installation directory (default: /Applications)
+    --user                 Install to ~/Applications instead
+    --dmg                  Create DMG installer instead of installing
+    --fetch-chromium       Fetch Chromium source before building
+    --build                Build Tux Browser after fetching
+    --fetch-and-build      Fetch Chromium and build (full setup)
+    --uninstall            Uninstall Tux Browser
+    --help                 Show this help
 
 Examples:
-    $0                  # Install to /Applications
-    $0 --user           # Install to ~/Applications
-    $0 --prefix=/Volumes/MyDrive/Applications
-    $0 --dmg            # Create TuxBrowser.dmg
-    $0 --uninstall      # Uninstall
+    $0 --fetch-and-build              # Full setup: fetch Chromium + build + install
+    $0 --fetch-chromium --build       # Fetch and build only
+    $0                                 # Install only (requires existing build)
+    $0 --user                         # Install to ~/Applications
+    $0 --dmg                          # Create DMG installer
+    $0 --uninstall                    # Uninstall
 EOF
 }
 
@@ -101,6 +166,8 @@ create_dmg() {
 USER_INSTALL=false
 CREATE_DMG=false
 UNINSTALL=false
+FETCH_CHROMIUM=false
+BUILD=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -115,6 +182,19 @@ while [[ $# -gt 0 ]]; do
             ;;
         --dmg)
             CREATE_DMG=true
+            shift
+            ;;
+        --fetch-chromium)
+            FETCH_CHROMIUM=true
+            shift
+            ;;
+        --build)
+            BUILD=true
+            shift
+            ;;
+        --fetch-and-build)
+            FETCH_CHROMIUM=true
+            BUILD=true
             shift
             ;;
         --uninstall)
@@ -141,11 +221,21 @@ if [[ "$CREATE_DMG" == true ]]; then
     create_dmg
 fi
 
+# Fetch Chromium if requested
+if [[ "$FETCH_CHROMIUM" == true ]]; then
+    fetch_chromium
+fi
+
+# Build if requested
+if [[ "$BUILD" == true ]]; then
+    build_tux_browser
+fi
+
 # Check if build exists
 APP_SOURCE="${BUILD_DIR}/${APP_NAME}"
 if [[ ! -d "$APP_SOURCE" ]]; then
     print_error "App bundle not found at $APP_SOURCE"
-    print_info "Please build first: ./build_tux_browser.sh"
+    print_info "Run with --fetch-and-build to fetch Chromium and build, or build first: ./build_tux_browser.sh"
     exit 1
 fi
 

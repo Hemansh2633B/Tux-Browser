@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # Tux Browser Installer for Linux
 # This script installs Tux Browser system-wide or user-wide
+# Also fetches Chromium source and builds if needed
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INSTALL_PREFIX="${INSTALL_PREFIX:-/usr/local}"
-BUILD_DIR="${SCRIPT_DIR}/chromium-main/chromium-main/out/tux_browser"
+CHROMIUM_SRC="${SCRIPT_DIR}/chromium-main/chromium-main"
+BUILD_DIR="${CHROMIUM_SRC}/out/tux_browser"
 DESKTOP_FILE="tux-browser.desktop"
 ICON_FILE="tux-browser.png"
 
@@ -22,6 +24,65 @@ print_success() { echo -e "${GREEN}[SUCCESS]${NC} $*"; }
 print_warning() { echo -e "${YELLOW}[WARNING]${NC} $*"; }
 print_error() { echo -e "${RED}[ERROR]${NC} $*"; }
 
+fetch_chromium() {
+    print_info "Fetching Chromium source..."
+    
+    # Check if depot_tools is available
+    if ! command -v gclient &> /dev/null; then
+        print_info "Installing depot_tools..."
+        DEPOT_TOOLS_DIR="${HOME}/.tux-browser/depot_tools"
+        if [[ ! -d "$DEPOT_TOOLS_DIR" ]]; then
+            git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git "$DEPOT_TOOLS_DIR"
+        fi
+        export PATH="${DEPOT_TOOLS_DIR}:${PATH}"
+    fi
+    
+    # Create chromium-main directory
+    mkdir -p "${SCRIPT_DIR}/chromium-main"
+    cd "${SCRIPT_DIR}/chromium-main"
+    
+    # Initialize gclient if needed
+    if [[ ! -f ".gclient" ]]; then
+        print_info "Configuring gclient for Chromium..."
+        cat > .gclient << 'EOF'
+solutions = [
+  {
+    "name": "chromium-main",
+    "url": "https://chromium.googlesource.com/chromium/src.git",
+    "deps_file": "DEPS",
+    "managed": True,
+    "custom_deps": {},
+    "safesync_url": "",
+  },
+]
+target_os = ["linux"]
+target_os_only = True
+EOF
+    fi
+    
+    # Sync Chromium (this will take a while)
+    print_info "Syncing Chromium source (this may take 30-60 minutes)..."
+    gclient sync --no-history --shallow
+    
+    print_success "Chromium source fetched successfully"
+}
+
+build_tux_browser() {
+    print_info "Building Tux Browser..."
+    
+    if [[ ! -f "${CHROMIUM_SRC}/BUILD.gn" ]]; then
+        print_error "Chromium source not found. Run with --fetch-chromium first."
+        exit 1
+    fi
+    
+    cd "${CHROMIUM_SRC}"
+    
+    # Run build script
+    "${SCRIPT_DIR}/build_tux_browser.sh" --clean
+    
+    print_success "Tux Browser built successfully"
+}
+
 usage() {
     cat << EOF
 Tux Browser Installer
@@ -29,67 +90,28 @@ Tux Browser Installer
 Usage: $0 [options]
 
 Options:
-    --prefix=DIR      Installation prefix (default: /usr/local)
-    --user            Install to ~/.local instead of system-wide
-    --uninstall       Uninstall Tux Browser
-    --help            Show this help
+    --prefix=DIR           Installation prefix (default: /usr/local)
+    --user                 Install to ~/.local instead of system-wide
+    --fetch-chromium       Fetch Chromium source before building
+    --build                Build Tux Browser after fetching
+    --fetch-and-build      Fetch Chromium and build (full setup)
+    --uninstall            Uninstall Tux Browser
+    --help                 Show this help
 
 Examples:
-    $0                    # Install system-wide to /usr/local
-    $0 --user             # Install to ~/.local
-    $0 --prefix=/opt      # Install to /opt
-    $0 --uninstall        # Uninstall
+    $0 --fetch-and-build              # Full setup: fetch Chromium + build + install
+    $0 --fetch-chromium --build       # Fetch and build only
+    $0                                 # Install only (requires existing build)
+    $0 --user                         # Install to ~/.local
+    $0 --uninstall                    # Uninstall
 EOF
-}
-
-uninstall() {
-    print_info "Uninstalling Tux Browser..."
-    
-    # System-wide
-    for prefix in "/usr/local" "/opt"; do
-        if [[ -f "${prefix}/bin/tux-browser" ]]; then
-            rm -f "${prefix}/bin/tux-browser"
-            print_success "Removed ${prefix}/bin/tux-browser"
-        fi
-        if [[ -d "${prefix}/lib/tux-browser" ]]; then
-            rm -rf "${prefix}/lib/tux-browser"
-            print_success "Removed ${prefix}/lib/tux-browser"
-        fi
-        if [[ -f "${prefix}/share/applications/tux-browser.desktop" ]]; then
-            rm -f "${prefix}/share/applications/tux-browser.desktop"
-            print_success "Removed desktop entry"
-        fi
-        if [[ -f "${prefix}/share/icons/hicolor/256x256/apps/tux-browser.png" ]]; then
-            rm -f "${prefix}/share/icons/hicolor/256x256/apps/tux-browser.png"
-            print_success "Removed icon"
-        fi
-    done
-    
-    # User-wide
-    if [[ -f "${HOME}/.local/bin/tux-browser" ]]; then
-        rm -f "${HOME}/.local/bin/tux-browser"
-        print_success "Removed ~/.local/bin/tux-browser"
-    fi
-    if [[ -d "${HOME}/.local/lib/tux-browser" ]]; then
-        rm -rf "${HOME}/.local/lib/tux-browser"
-        print_success "Removed ~/.local/lib/tux-browser"
-    fi
-    if [[ -f "${HOME}/.local/share/applications/tux-browser.desktop" ]]; then
-        rm -f "${HOME}/.local/share/applications/tux-browser.desktop"
-        print_success "Removed user desktop entry"
-    fi
-    if [[ -f "${HOME}/.local/share/icons/hicolor/256x256/apps/tux-browser.png" ]]; then
-        rm -f "${HOME}/.local/share/icons/hicolor/256x256/apps/tux-browser.png"
-        print_success "Removed user icon"
-    fi
-    
-    print_success "Uninstallation complete!"
-    exit 0
 }
 
 # Parse arguments
 USER_INSTALL=false
 UNINSTALL=false
+FETCH_CHROMIUM=false
+BUILD=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -100,6 +122,19 @@ while [[ $# -gt 0 ]]; do
         --user)
             USER_INSTALL=true
             INSTALL_PREFIX="${HOME}/.local"
+            shift
+            ;;
+        --fetch-chromium)
+            FETCH_CHROMIUM=true
+            shift
+            ;;
+        --build)
+            BUILD=true
+            shift
+            ;;
+        --fetch-and-build)
+            FETCH_CHROMIUM=true
+            BUILD=true
             shift
             ;;
         --uninstall)
@@ -122,11 +157,21 @@ if [[ "$UNINSTALL" == true ]]; then
     uninstall
 fi
 
+# Fetch Chromium if requested
+if [[ "$FETCH_CHROMIUM" == true ]]; then
+    fetch_chromium
+fi
+
+# Build if requested
+if [[ "$BUILD" == true ]]; then
+    build_tux_browser
+fi
+
 # Check if build exists
 BINARY="${BUILD_DIR}/chrome"
 if [[ ! -f "$BINARY" ]]; then
     print_error "Tux Browser binary not found at $BINARY"
-    print_info "Please build first: ./build_tux_browser.sh"
+    print_info "Run with --fetch-and-build to fetch Chromium and build, or build first: ./build_tux_browser.sh"
     exit 1
 fi
 

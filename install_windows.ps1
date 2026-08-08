@@ -4,6 +4,7 @@
 
 .DESCRIPTION
     Installs Tux Browser system-wide or user-wide on Windows
+    Also fetches Chromium source and builds if needed
 
 .PARAMETER Prefix
     Installation prefix (default: $env:ProgramFiles\Tux Browser)
@@ -11,14 +12,23 @@
 .PARAMETER User
     Install to %LOCALAPPDATA%\Tux Browser instead of system-wide
 
+.PARAMETER FetchChromium
+    Fetch Chromium source before building
+
+.PARAMETER Build
+    Build Tux Browser after fetching
+
+.PARAMETER FetchAndBuild
+    Fetch Chromium and build (full setup)
+
 .PARAMETER Uninstall
     Uninstall Tux Browser
 
 .EXAMPLE
-    .\install_windows.ps1
+    .\install_windows.ps1 -FetchAndBuild
 
 .EXAMPLE
-    .\install_windows.ps1 -User
+    .\install_windows.ps1 -User -FetchAndBuild
 
 .EXAMPLE
     .\install_windows.ps1 -Uninstall
@@ -27,6 +37,9 @@
 param(
     [string]$Prefix = "$env:ProgramFiles\Tux Browser",
     [switch]$User,
+    [switch]$FetchChromium,
+    [switch]$Build,
+    [switch]$FetchAndBuild,
     [switch]$Uninstall,
     [switch]$Help
 )
@@ -36,17 +49,81 @@ if ($Help) {
     Write-Host ""
     Write-Host "Usage: .\install_windows.ps1 [options]"
     Write-Host "Options:"
-    Write-Host "  --Prefix=DIR       Installation directory (default: $env:ProgramFiles\Tux Browser)"
-    Write-Host "  --User             Install to %LOCALAPPDATA%\Tux Browser"
-    Write-Host "  --Uninstall        Uninstall Tux Browser"
-    Write-Host "  --Help             Show this help"
+    Write-Host "  --Prefix=DIR           Installation directory (default: $env:ProgramFiles\Tux Browser)"
+    Write-Host "  --User                 Install to %LOCALAPPDATA%\Tux Browser"
+    Write-Host "  --FetchChromium        Fetch Chromium source before building"
+    Write-Host "  --Build                Build Tux Browser after fetching"
+    Write-Host "  --FetchAndBuild        Fetch Chromium and build (full setup)"
+    Write-Host "  --Uninstall            Uninstall Tux Browser"
+    Write-Host "  --Help                 Show this help"
     exit 0
 }
 
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$BuildDir = Join-Path $ScriptDir "chromium-main\chromium-main\out\tux_browser"
+$ChromiumSrc = Join-Path $ScriptDir "chromium-main\chromium-main"
+$BuildDir = Join-Path $ChromiumSrc "out\tux_browser"
 $Binary = Join-Path $BuildDir "chrome.exe"
+
+function Fetch-Chromium {
+    Write-Host "Fetching Chromium source..." -ForegroundColor Yellow
+    
+    # Check if depot_tools is available
+    $DepotToolsDir = Join-Path $env:USERPROFILE ".tux-browser\depot_tools"
+    if (-not (Get-Command gclient -ErrorAction SilentlyContinue)) {
+        Write-Host "Installing depot_tools..." -ForegroundColor Yellow
+        if (-not (Test-Path $DepotToolsDir)) {
+            git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $DepotToolsDir
+        }
+        $env:PATH = "$DepotToolsDir;$env:PATH"
+    }
+    
+    # Create chromium-main directory
+    $ChromiumMainDir = Join-Path $ScriptDir "chromium-main"
+    New-Item -ItemType Directory -Force -Path $ChromiumMainDir | Out-Null
+    Set-Location $ChromiumMainDir
+    
+    # Initialize gclient if needed
+    if (-not (Test-Path ".gclient")) {
+        Write-Host "Configuring gclient for Chromium..." -ForegroundColor Yellow
+        @"
+solutions = [
+  {
+    "name": "chromium-main",
+    "url": "https://chromium.googlesource.com/chromium/src.git",
+    "deps_file": "DEPS",
+    "managed": True,
+    "custom_deps": {},
+    "safesync_url": "",
+  },
+]
+target_os = ["win"]
+target_os_only = True
+"@ | Set-Content -Path ".gclient" -Encoding UTF8
+    }
+    
+    # Sync Chromium (this will take a while)
+    Write-Host "Syncing Chromium source (this may take 30-60 minutes)..." -ForegroundColor Yellow
+    gclient sync --no-history --shallow
+    
+    Write-Host "Chromium source fetched successfully" -ForegroundColor Green
+}
+
+function Build-TuxBrowser {
+    Write-Host "Building Tux Browser..." -ForegroundColor Yellow
+    
+    if (-not (Test-Path (Join-Path $ChromiumSrc "BUILD.gn"))) {
+        Write-Error "ERROR: Chromium source not found. Run with -FetchChromium first."
+        exit 1
+    }
+    
+    Set-Location $ChromiumSrc
+    
+    # Run build script
+    .\build_tux_browser.ps1 -Clean
+    
+    Write-Host "Tux Browser built successfully" -ForegroundColor Green
+}
 
 function Uninstall-TuxBrowser {
     Write-Host "Uninstalling Tux Browser..." -ForegroundColor Yellow
@@ -95,6 +172,21 @@ if ($Uninstall) {
     Uninstall-TuxBrowser
 }
 
+if ($FetchAndBuild) {
+    $FetchChromium = $true
+    $Build = $true
+}
+
+# Fetch Chromium if requested
+if ($FetchChromium) {
+    Fetch-Chromium
+}
+
+# Build if requested
+if ($Build) {
+    Build-TuxBrowser
+}
+
 if ($User) {
     $Prefix = "$env:LocalAppData\Tux Browser"
 }
@@ -108,7 +200,7 @@ Write-Host ""
 # Check if build exists
 if (-not (Test-Path $Binary)) {
     Write-Error "ERROR: Tux Browser binary not found at $Binary"
-    Write-Host "Please build first: .\build_tux_browser.ps1" -ForegroundColor Yellow
+    Write-Host "Run with -FetchAndBuild to fetch Chromium and build, or build first: .\build_tux_browser.ps1" -ForegroundColor Yellow
     exit 1
 }
 
